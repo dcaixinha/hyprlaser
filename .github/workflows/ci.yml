@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A new push to a branch cancels in-flight runs of the previous push for
+# the same branch. Cheap CI = happy maintainer.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Sensible defaults for all jobs.
+env:
+  CARGO_TERM_COLOR: always
+  # Slim down rustc debug output; we don't need backtraces unless something
+  # actually panics in tests.
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    name: fmt + clippy + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system deps
+        # - libwayland-dev: wayland-backend builds with the `client_system`
+        #   feature, which links against libwayland-client.
+        # - libxkbcommon-dev: SCTK's build.rs unconditionally pkg-config
+        #   probes xkbcommon (keyboard support is non-optional in SCTK).
+        #   We don't actually use any keyboard features, but the build
+        #   still needs it.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwayland-dev libxkbcommon-dev pkg-config
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Separate cache key per job so the build job's larger target/
+          # dir doesn't push the check job's cache out.
+          shared-key: check
+
+      - name: cargo fmt --check
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: cargo test
+        run: cargo test --all-targets
+
+  build:
+    name: cargo build --release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install system deps
+        # See `check` job above for why these are needed.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwayland-dev libxkbcommon-dev pkg-config
+
+      - name: Install Rust toolchain (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release
+
+      - name: cargo build --release
+        run: cargo build --release --locked
+
+      - name: "Sanity: binary runs and prints version"
+        run: ./target/release/hyprlaser --version
+
+  packaging:
+    name: PKGBUILD lint
+    runs-on: ubuntu-latest
+    # Runs in an Arch container so we have access to makepkg, namcap, and
+    # the AUR packaging tools.
+    container:
+      image: archlinux:base-devel
+    steps:
+      - name: Install packaging tools
+        # `base-devel` already brings most of what we need (makepkg,
+        # bash, awk). We add namcap for PKGBUILD/package linting and
+        # sudo so we can drop privileges to a non-root user — makepkg
+        # refuses to run as root.
+        run: |
+          pacman -Syu --noconfirm namcap git sudo
+          # Create a non-root user that makepkg will accept.
+          useradd -m builder
+          echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+      - uses: actions/checkout@v6
+
+      - name: Hand the workspace to the builder user
+        # actions/checkout runs as root inside the container, leaving the
+        # workspace root-owned. makepkg refuses to run as root, and the
+        # builder user it falls back to has no write permission to the
+        # root-owned $BUILDDIR — which is where it stages even when only
+        # running `--printsrcinfo`. Chowning fixes both that and the
+        # 'detected dubious ownership' git complaint.
+        run: |
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+          sudo -u builder git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: PKGBUILD parses and .SRCINFO is up to date
+        working-directory: packaging/aur
+        # If a contributor changes PKGBUILD but forgets to regenerate
+        # .SRCINFO, this catches it.
+        run: |
+          sudo -u builder makepkg --printsrcinfo > .SRCINFO.generated
+          if ! diff -u .SRCINFO .SRCINFO.generated; then
+            echo "::error::.SRCINFO is out of date. Run 'makepkg --printsrcinfo > .SRCINFO' in packaging/aur/ and commit the result."
+            exit 1
+          fi
+
+      - name: namcap on PKGBUILD
+        working-directory: packaging/aur
+        # namcap warnings are advisory, not errors. We surface them in the
+        # log but don't fail the job — namcap is opinionated and some of
+        # its lints (e.g. "no install file") don't apply to us.
+        run: namcap PKGBUILD || true

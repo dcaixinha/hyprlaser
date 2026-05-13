@@ -1,0 +1,54 @@
+[package]
+name = "hyprlaser"
+version = "0.1.0"
+edition = "2021"
+# Bumped to 1.87 for stable `u32::is_multiple_of` in `src/hypr_ipc.rs`.
+# `cargo` refuses to build with older toolchains and emits a clear error
+# pointing the user at rustup, which is what we want.
+rust-version = "1.87"
+license = "Apache-2.0"
+description = "A Google-Slides-style laser pointer overlay for Hyprland"
+repository = "https://github.com/dcaixinha/hyprlaser"
+readme = "README.md"
+keywords = ["hyprland", "wayland", "laser", "pointer", "overlay"]
+categories = ["command-line-utilities", "gui"]
+
+[dependencies]
+# Wayland client toolkit (also exposes the wlr-layer-shell protocol bindings)
+smithay-client-toolkit = "0.19"
+# Re-exported by SCTK, but we depend on it directly so we can name types like
+# `wayland_client::Connection` without going through SCTK's re-exports.
+wayland-client = "0.31"
+# We need the libwayland-based backend so we can hand wgpu raw pointers
+# (`Backend::display_ptr`, `ObjectId::as_ptr`). Those methods are gated on
+# the `client_system` feature.
+wayland-backend = { version = "0.3", features = ["client_system"] }
+# We bind two extra protocols by name (wp_fractional_scale_v1,
+# wp_viewporter) to support HiDPI / fractional scaling. SCTK already
+# enables the right features transitively; this entry is just so we
+# can reference the types in our own modules.
+wayland-protocols = { version = "0.32", features = ["client", "staging"] }
+# GPU rendering. We render a single fullscreen triangle per surface with a
+# fragment shader that computes the distance from each pixel to the trail
+# polyline and produces the dot + tapered streak.
+wgpu = "22"
+# Bridges our manually-constructed Wayland handles into wgpu's surface API.
+raw-window-handle = "0.6"
+# Block on wgpu's async adapter/device requests without dragging in tokio.
+pollster = "0.3"
+# Logging facade + a simple env-controlled backend (RUST_LOG=info/debug/trace).
+log = "0.4"
+env_logger = "0.11"
+# Plain-old-data casts for uniform buffer uploads.
+bytemuck = { version = "1", features = ["derive"] }
+# Command-line parsing with the derive API.
+clap = { version = "4", features = ["derive"] }
+# Cooperative Ctrl+C handling: sets an AtomicBool the main loop polls.
+ctrlc = "3"
+# Parse "#rrggbb" / "red" / "rgb(255, 0, 0)" etc. for the --color flag.
+csscolorparser = "0.7"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"

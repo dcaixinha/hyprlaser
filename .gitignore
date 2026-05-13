@@ -1,0 +1,9 @@
+/target
+Cargo.lock.bak
+*.swp
+*.swo
+
+# Override a potential global-gitignore rule for AGENTS.md — this file
+# is intentionally tracked so contributors using AI coding assistants
+# get the agent-oriented guide.
+!AGENTS.md

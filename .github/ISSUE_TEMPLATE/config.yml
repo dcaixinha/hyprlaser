@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Hyprland support
+    url: https://discord.gg/hQ9XvMUjjr
+    about: Questions about Hyprland itself (not hyprlaser) belong in the Hyprland Discord, not here.

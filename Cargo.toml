@@ -1,6 +1,6 @@
 [package]
 name = "hyprlaser"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 # Bumped to 1.87 for stable `u32::is_multiple_of` in `src/hypr_ipc.rs`.
 # `cargo` refuses to build with older toolchains and emits a clear error

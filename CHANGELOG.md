@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 <!--
+Add entries here as you merge PRs into main. The release
+script will rename this section to ## [X.Y.Z] - YYYY-MM-DD
+and add a fresh empty Unreleased on top of it.
+-->
+
+## [0.1.1] - 2026-05-14
+
+<!--
 Add entries here as you merge PRs into main. Use the subsection headings
 that apply:
 
@@ -53,5 +61,6 @@ top.
   `--trail-ms`, `--keep-cursor`.
 - AUR packaging recipe at `packaging/aur/`.
 
-[Unreleased]: https://github.com/dcaixinha/hyprlaser/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/dcaixinha/hyprlaser/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/dcaixinha/hyprlaser/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/dcaixinha/hyprlaser/releases/tag/v0.1.0

@@ -43,8 +43,12 @@ env_logger = "0.11"
 bytemuck = { version = "1", features = ["derive"] }
 # Command-line parsing with the derive API.
 clap = { version = "4", features = ["derive"] }
-# Cooperative Ctrl+C handling: sets an AtomicBool the main loop polls.
-ctrlc = "3"
+# Cooperative termination handling. The `termination` feature also
+# registers SIGTERM (what `pkill` sends by default) and SIGHUP, not
+# just SIGINT (Ctrl+C) — so e.g. a toggle keybind like
+# `pkill hyprlaser || hyprlaser` exits cleanly and the CursorHider's
+# Drop impl runs, restoring the OS cursor.
+ctrlc = { version = "3", features = ["termination"] }
 # Parse "#rrggbb" / "red" / "rgb(255, 0, 0)" etc. for the --color flag.
 csscolorparser = "0.7"
 

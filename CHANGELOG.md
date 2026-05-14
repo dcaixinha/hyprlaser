@@ -23,6 +23,15 @@ When you cut a release, the release script will rename this section to
 top.
 -->
 
+### Fixed
+
+- Restore the OS cursor when terminated by `SIGTERM` (e.g. via `pkill
+  hyprlaser`) or `SIGHUP`. Previously only `SIGINT` (Ctrl+C) triggered
+  cooperative shutdown; other signals killed the process abruptly,
+  leaving the cursor hidden until `hyprctl keyword cursor:invisible 0`
+  was run manually. This makes the README's
+  `pkill hyprlaser || hyprlaser` toggle keybind work correctly.
+
 ## [0.1.0] - 2026-05-14
 
 ### Added

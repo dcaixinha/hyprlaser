@@ -3,6 +3,13 @@ Cargo.lock.bak
 *.swp
 *.swo
 
+# updpkgsums / makepkg leave the source tarball and pkg/src dirs behind
+# in packaging/aur. None of these belong in git.
+/packaging/aur/*.tar.gz
+/packaging/aur/.SRCINFO.generated
+/packaging/aur/pkg/
+/packaging/aur/src/
+
 # Override a potential global-gitignore rule for AGENTS.md — this file
 # is intentionally tracked so contributors using AI coding assistants
 # get the agent-oriented guide.

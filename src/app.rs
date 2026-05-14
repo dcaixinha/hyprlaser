@@ -103,15 +103,19 @@ pub fn run(config: LaserConfig) -> Result<(), Box<dyn std::error::Error>> {
     // we're not in a Hyprland session, fail fast with a clear error.
     let (_cursor, _ipc_thread) = hypr_ipc::spawn(CURSOR_POLL_HZ, Arc::clone(&trail))?;
 
-    // Ctrl+C handler. Installed before CursorHider so signals during
-    // early startup still trigger proper cleanup via Drop.
+    // Signal handler for cooperative shutdown. With the `termination`
+    // feature enabled, ctrlc registers SIGINT (Ctrl+C), SIGTERM (what
+    // `pkill` sends), and SIGHUP — all three flip the same flag, the
+    // main loop returns, and the CursorHider's Drop impl restores the
+    // OS cursor. Installed before CursorHider so signals during early
+    // startup still trigger proper cleanup via Drop.
     let shutdown = Arc::new(AtomicBool::new(false));
     let shutdown_handler = Arc::clone(&shutdown);
     ctrlc::set_handler(move || {
-        log::info!("Ctrl+C received, shutting down");
+        log::info!("shutdown signal received");
         shutdown_handler.store(true, Ordering::Relaxed);
     })
-    .map_err(|e| format!("failed to install Ctrl+C handler: {e}"))?;
+    .map_err(|e| format!("failed to install signal handler: {e}"))?;
 
     // Hide the OS cursor unless the user opted out. Held until `run`
     // returns so its Drop restores the cursor on every exit path.
